@@ -18,10 +18,7 @@ use Psr\Log\LoggerAwareTrait;
 
 /**
  * Resolves a resource's categories, each with the url of its primary parent as
- * the taxonomy `domain`.
- *
- * A category resource that has gone missing is skipped: one broken reference
- * should cost a single `<category>`, not the whole feed.
+ * the taxonomy `domain`. A category that cannot be loaded is skipped.
  */
 class CategoryFactory implements LoggerAwareInterface
 {

@@ -9,15 +9,11 @@ use Atoolo\Rss\Dto\Item;
 
 /**
  * Maps one search hit onto a feed item.
- *
- * The seam a project overrides to change what a feed item says, without
- * touching the rest of the bundle.
  */
 interface ItemFactory
 {
     /**
-     * Null skips the resource, so a hit that cannot make a usable item does not
-     * become an empty entry in the feed.
+     * Null skips the resource.
      */
     public function create(Resource $resource): ?Item;
 }

@@ -8,10 +8,7 @@ use Atoolo\Rss\Dto\Feed;
 use Atoolo\Rss\Dto\Item;
 
 /**
- * Serialises a feed to RSS 2.0. The only class here that knows about XML.
- *
- * `XMLWriter` rather than a feed library: RSS 2.0 is small, and escaping - the
- * one thing worth getting right - it handles itself.
+ * Serialises a feed to RSS 2.0. The only class that knows about XML.
  */
 class FeedWriter
 {
@@ -46,8 +43,7 @@ class FeedWriter
         $writer->startElement('channel');
         $writer->writeElement('title', $channel->title);
         $writer->writeElement('link', $channel->link);
-        // title, link and description are the three elements RSS 2.0 requires
-        // of a channel, so description is written even when it is empty.
+        // Required by RSS 2.0, so written even when empty.
         $writer->writeElement('description', $channel->description ?? '');
         $this->writeOptionalElement($writer, 'language', $channel->language);
         $this->writeOptionalElement($writer, 'copyright', $channel->copyright);

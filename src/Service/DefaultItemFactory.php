@@ -45,8 +45,8 @@ class DefaultItemFactory implements ItemFactory
         return new Item(
             title: $title,
             link: $link,
-            // The link doubles as the guid. Readers key their "already seen"
-            // state on it, so changing this would resurface every old item.
+            // Readers key their read state on the guid: changing what goes
+            // in here resurfaces every item.
             guid: $link,
             description: $description === '' ? null : $description,
             pubDate: $this->pubDate($resource),
@@ -56,8 +56,7 @@ class DefaultItemFactory implements ItemFactory
     }
 
     /**
-     * Absent rather than epoch: a resource without a date would otherwise show
-     * up as 1970 and sort to the bottom of every reader for good.
+     * Null rather than epoch: a dateless resource would show up as 1970.
      */
     private function pubDate(Resource $resource): ?\DateTimeImmutable
     {
@@ -95,8 +94,7 @@ class DefaultItemFactory implements ItemFactory
     }
 
     /**
-     * Rewritten and fully qualified: a feed is read away from the site, and its
-     * links must match the ones the site itself renders.
+     * Fully qualified: a feed is read away from the site.
      */
     private function url(
         UrlRewriteType $type,

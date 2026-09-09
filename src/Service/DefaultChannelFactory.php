@@ -13,13 +13,8 @@ use Atoolo\Rss\Dto\Channel;
 use Atoolo\Rss\Dto\Image;
 
 /**
- * Reads the channel metadata off the resource the feed belongs to - the page
- * carrying the search, not one of its results.
- *
- * Without such a resource the site itself supplies the values. They are poorer
- * (a site name rather than "Pressemitteilungen") but they are still the site's
- * own content, which is the point: a caller must not be able to put arbitrary
- * text in front of a feed reader under this domain.
+ * Reads the channel metadata off the resource the feed belongs to, or off the
+ * site itself when there is none.
  */
 class DefaultChannelFactory implements ChannelFactory
 {
@@ -112,8 +107,7 @@ class DefaultChannelFactory implements ChannelFactory
     }
 
     /**
-     * Rewritten and fully qualified: a feed is read away from the site, and its
-     * links must match the ones the site itself renders.
+     * Fully qualified: a feed is read away from the site.
      */
     private function url(
         UrlRewriteType $type,

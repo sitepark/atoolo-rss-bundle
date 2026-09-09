@@ -14,9 +14,6 @@ class Feed
         public readonly array $items = [],
     ) {}
 
-    /**
-     * The most recent item date, or null when no item carries one.
-     */
     public function getLastBuildDate(): ?\DateTimeImmutable
     {
         $latest = null;

@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace Atoolo\Rss\Dto;
 
 /**
- * A `media:content` entry. `type` and `fileSize` are optional in MRSS and stay
- * null when the file could not be located on disk.
+ * A `media:content` entry. `type` and `fileSize` are optional in MRSS.
  */
 class Media
 {

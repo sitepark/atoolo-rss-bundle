@@ -1,14 +1,10 @@
 parameters:
-  # Shown as <generator>. Override in the application to name your own system.
   atoolo_rss.channel.generator: 'Information Enterprise Server – Sitepark GmbH'
-  # Shown as <copyright>, e.g. 'Copyright 2026, Landeshauptstadt Musterstadt'.
   # Null omits the element.
   atoolo_rss.channel.copyright: ~
-  # Channel <description> when the feed has no location, or the located page
-  # carries none.
+  # Used when the feed has no location, or the page carries no description.
   atoolo_rss.channel.description: ~
-  # Upper bound for the `limit` of an incoming search query; a query asking for
-  # more is rejected. Each item costs a Solr row and a resource load from disk.
+  # Upper bound for the `limit` of an incoming query; more is rejected.
   atoolo_rss.max_items: 100
 
 services:
@@ -16,9 +12,7 @@ services:
     autowire: true
     autoconfigure: true
 
-  # Locating a media file depends on how the channel publishes its resources,
-  # so the bundle ships a no-op. Replace this alias in the application to get
-  # `type` and `fileSize` on media:content.
+  # Replace this alias to get `type` and `fileSize` on media:content.
   Atoolo\Rss\Service\MediaFileLocator:
     alias: Atoolo\Rss\Service\NullMediaFileLocator
 

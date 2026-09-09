@@ -7,8 +7,8 @@ namespace Atoolo\Rss\Controller;
 use Atoolo\Resource\Exception\InvalidResourceException;
 use Atoolo\Resource\Exception\ResourceNotFoundException;
 use Atoolo\Resource\Resource;
-use Atoolo\Resource\ResourceLoader;
 use Atoolo\Resource\ResourceLanguage;
+use Atoolo\Resource\ResourceLoader;
 use Atoolo\Resource\ResourceLocation;
 use Atoolo\Rss\Service\FeedFactory;
 use Atoolo\Rss\Service\FeedWriter;
@@ -28,10 +28,6 @@ use Symfony\Component\Serializer\SerializerInterface;
 
 /**
  * Renders search results as an RSS feed.
- *
- * `location` is the page the feed belongs to, not one of the results - it
- * supplies the channel title, description and image. It is optional; without it
- * the channel falls back to the site's own metadata.
  */
 class RssController extends AbstractController implements LoggerAwareInterface
 {
@@ -52,8 +48,7 @@ class RssController extends AbstractController implements LoggerAwareInterface
         '/api/rss/search',
         name: 'atoolo_rss_search',
         methods: ['GET'],
-        // 'json' although the body is XML: it is what makes
-        // phpro/api-problem-bundle render errors as RFC7807.
+        // Not the response format - it makes errors render as RFC7807.
         format: 'json',
     )]
     public function rssBySearch(Request $request): Response
@@ -67,9 +62,6 @@ class RssController extends AbstractController implements LoggerAwareInterface
         $searchQuery = $this->deserializeSearchQuery($query);
         $resources = $this->findResources($searchQuery);
 
-        // Optional: without it the channel falls back to the site's metadata.
-        // A location that was given but does not resolve is still an error -
-        // silently serving a generic feed would be hard to debug.
         $location = $request->query->getString('location');
         $resource = $location === '' ? null : $this->loadResource(
             $this->toResourceLocation($location, $searchQuery->lang),
@@ -119,10 +111,8 @@ class RssController extends AbstractController implements LoggerAwareInterface
         string $location,
         ResourceLanguage $lang,
     ): ResourceLocation {
-        // A '..' segment would escape the resource directory: the loader
-        // concatenates the location onto it and `require`s the result. Query
-        // parameters arrive decoded and unnormalised, so '%2e%2e%2f' lands here
-        // as '../' and nothing upstream has collapsed it.
+        // The loader concatenates the location onto the resource directory
+        // and `require`s the result, so '..' must not reach it.
         if (in_array('..', explode('/', $location), true)) {
             throw new BadRequestHttpException(
                 'query parameter \'location\' must not traverse directories',
@@ -156,9 +146,8 @@ class RssController extends AbstractController implements LoggerAwareInterface
     private function deserializeSearchQuery(string $query): SearchQuery
     {
         try {
-            // A JSON list would reach the denormalizer as a php array and pass
-            // its `is_array` guard, yielding a default query instead of an
-            // error. Only an object is a search query.
+            // A JSON list passes the denormalizer's is_array() guard and
+            // would yield a default query, so require an object.
             if (!json_decode($query, false, 512, JSON_THROW_ON_ERROR) instanceof \stdClass) {
                 throw new \JsonException('search query is not an object');
             }
@@ -172,14 +161,11 @@ class RssController extends AbstractController implements LoggerAwareInterface
                 'Something went wrong while trying to deserialize a search query.',
                 ['query' => $query, 'exception' => $e],
             );
-            // The query is not echoed back: it is attacker-controlled and ends
-            // up in the response body and in logs.
+            // Not echoing the query back: it is caller-controlled.
             throw new BadRequestHttpException('Invalid search query', $e);
         }
 
-        // Rejected rather than capped: the caller can only fix this where the
-        // url is built, and a silently shortened feed is hard to notice. Every
-        // item costs a Solr row and a resource load from disk.
+        // Every item costs a Solr row and a resource load from disk.
         if ($searchQuery->limit > $this->maxItems) {
             throw new BadRequestHttpException(sprintf(
                 'limit must not exceed %d items per feed',

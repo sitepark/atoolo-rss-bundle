@@ -18,9 +18,8 @@ class FeedFactory
     ) {}
 
     /**
-     * @param ?Resource $resource the page the feed belongs to; without one the
-     *                            channel falls back to the site's own metadata
-     * @param list<Resource> $resources
+     * @param ?Resource $resource the page the feed belongs to, if any
+     * @param list<Resource> $resources the search hits
      */
     public function create(
         ?Resource $resource,
