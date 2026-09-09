@@ -1,0 +1,71 @@
+parameters:
+  # Shown as <generator>. Override in the application to name your own system.
+  atoolo_rss.channel.generator: 'Information Enterprise Server – Sitepark GmbH'
+  # Shown as <copyright>, e.g. 'Copyright 2026, Landeshauptstadt Musterstadt'.
+  # Null omits the element.
+  atoolo_rss.channel.copyright: ~
+  # Channel <description> when the feed has no location, or the located page
+  # carries none.
+  atoolo_rss.channel.description: ~
+  # Upper bound for the `limit` of an incoming search query; a query asking for
+  # more is rejected. Each item costs a Solr row and a resource load from disk.
+  atoolo_rss.max_items: 100
+
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+
+  # Locating a media file depends on how the channel publishes its resources,
+  # so the bundle ships a no-op. Replace this alias in the application to get
+  # `type` and `fileSize` on media:content.
+  Atoolo\Rss\Service\MediaFileLocator:
+    alias: Atoolo\Rss\Service\NullMediaFileLocator
+
+  Atoolo\Rss\Service\NullMediaFileLocator: ~
+
+  Atoolo\Rss\Service\CategoryFactory:
+    arguments:
+      - '@atoolo_resource.resource_loader'
+      - '@atoolo_rewrite.url_rewriter'
+
+  Atoolo\Rss\Service\DefaultChannelFactory:
+    arguments:
+      - '@atoolo_rewrite.url_rewriter'
+      - '@atoolo_resource.resource_channel'
+      - '%atoolo_rss.channel.generator%'
+      - '%atoolo_rss.channel.copyright%'
+      - '%atoolo_rss.channel.description%'
+
+  # The seam: alias this to change what the channel says.
+  Atoolo\Rss\Service\ChannelFactory:
+    alias: Atoolo\Rss\Service\DefaultChannelFactory
+
+  Atoolo\Rss\Service\DefaultItemFactory:
+    arguments:
+      - '@atoolo_rewrite.url_rewriter'
+      - '@Atoolo\Rss\Service\MediaFileLocator'
+      - '@Atoolo\Rss\Service\CategoryFactory'
+
+  # The seam: alias this to change what an item says.
+  Atoolo\Rss\Service\ItemFactory:
+    alias: Atoolo\Rss\Service\DefaultItemFactory
+
+  Atoolo\Rss\Service\FeedFactory:
+    arguments:
+      - '@Atoolo\Rss\Service\ChannelFactory'
+      - '@Atoolo\Rss\Service\ItemFactory'
+
+  Atoolo\Rss\Service\FeedWriter: ~
+
+  Atoolo\Rss\Controller\RssController:
+    public: true
+    arguments:
+      - '@atoolo_search.search'
+      - '@serializer'
+      - '@atoolo_resource.resource_loader'
+      - '@Atoolo\Rss\Service\FeedFactory'
+      - '@Atoolo\Rss\Service\FeedWriter'
+      - '%atoolo_rss.max_items%'
+    tags:
+      - { name: 'controller.service_arguments' }
