@@ -87,7 +87,8 @@ class RssController extends AbstractController implements LoggerAwareInterface
     private function findResources(SearchQuery $searchQuery): array
     {
         try {
-            return $this->search->search($searchQuery)->results;
+            // FeedFactory::create() needs a list, the result is a plain array
+            return array_values($this->search->search($searchQuery)->results);
         } catch (UnsupportedIndexLanguageException $e) {
             throw new BadRequestHttpException(
                 'Language "' . $e->getLang()->code . '" for index "'
