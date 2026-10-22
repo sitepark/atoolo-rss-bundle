@@ -6,6 +6,7 @@ namespace Atoolo\Rss\Service;
 
 use Atoolo\Rss\Dto\Feed;
 use Atoolo\Rss\Dto\Item;
+use Atoolo\Rss\Dto\Media;
 
 /**
  * Serialises a feed to RSS 2.0. The only class that knows about XML.
@@ -15,6 +16,8 @@ class FeedWriter
     private const MEDIA_NAMESPACE = 'http://search.yahoo.com/mrss/';
 
     private const ATOM_NAMESPACE = 'http://www.w3.org/2005/Atom';
+
+    private const CONTENT_NAMESPACE = 'http://purl.org/rss/1.0/modules/content/';
 
     public function write(Feed $feed): string
     {
@@ -98,18 +101,24 @@ class FeedWriter
             );
         }
 
+        if ($item->content !== null && $item->content !== '') {
+            $writer->writeElementNs(
+                'content',
+                'encoded',
+                self::CONTENT_NAMESPACE,
+                $item->content,
+            );
+        }
+
         if ($item->media !== null) {
             $writer->startElement('media:content');
-            $writer->writeAttribute('url', $item->media->url);
-            if ($item->media->type !== null) {
-                $writer->writeAttribute('type', $item->media->type);
-            }
-            if ($item->media->fileSize !== null) {
-                $writer->writeAttribute(
-                    'fileSize',
-                    (string) $item->media->fileSize,
-                );
-            }
+            $this->writeMediaAttributes($writer, $item->media);
+            $writer->endElement();
+        }
+
+        if ($item->thumbnail !== null) {
+            $writer->startElement('media:thumbnail');
+            $writer->writeAttribute('url', $item->thumbnail->url);
             $writer->endElement();
         }
 
@@ -123,6 +132,20 @@ class FeedWriter
         }
 
         $writer->endElement();
+    }
+
+    private function writeMediaAttributes(\XMLWriter $writer, Media $media): void
+    {
+        $writer->writeAttribute('url', $media->url);
+        if ($media->type !== null) {
+            $writer->writeAttribute('type', $media->type);
+        }
+        if ($media->fileSize !== null) {
+            $writer->writeAttribute('fileSize', (string) $media->fileSize);
+        }
+        if ($media->medium !== null) {
+            $writer->writeAttribute('medium', $media->medium);
+        }
     }
 
     private function writeOptionalElement(

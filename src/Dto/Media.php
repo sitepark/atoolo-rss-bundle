@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Atoolo\Rss\Dto;
 
 /**
- * A `media:content` entry. `type` and `fileSize` are optional in MRSS.
+ * A `media:content` entry. `type`, `fileSize` and `medium` are optional in
+ * MRSS.
  */
 class Media
 {
@@ -13,5 +14,7 @@ class Media
         public readonly string $url,
         public readonly ?string $type = null,
         public readonly ?int $fileSize = null,
+        /** the MRSS `medium`: image, audio, video, document or executable */
+        public readonly ?string $medium = null,
     ) {}
 }

@@ -179,6 +179,40 @@ class FeedWriterTest extends TestCase
         );
     }
 
+    public function testWriteContentMediumAndThumbnail(): void
+    {
+        $feed = new Feed($this->minimalChannel(), [
+            new Item(
+                title: 'A',
+                link: 'https://www.example.com/a',
+                guid: 'https://www.example.com/a',
+                media: new Media(
+                    'https://www.example.com/v.mp4',
+                    medium: 'video',
+                ),
+                content: '<p>Volltext</p>',
+                thumbnail: new Media('https://www.example.com/t.jpg'),
+            ),
+        ]);
+
+        $xml = $this->writer->write($feed);
+
+        $this->assertStringContainsString(
+            '<content:encoded xmlns:content="http://purl.org/rss/1.0/modules/content/">'
+                . '&lt;p&gt;Volltext&lt;/p&gt;</content:encoded>',
+            $xml,
+            'content should be written as content:encoded',
+        );
+        $this->assertStringContainsString(
+            '<media:content url="https://www.example.com/v.mp4" medium="video"/>',
+            $xml,
+        );
+        $this->assertStringContainsString(
+            '<media:thumbnail url="https://www.example.com/t.jpg"/>',
+            $xml,
+        );
+    }
+
     public function testWriteResolvesPrefixedNamespaces(): void
     {
         $feed = new Feed($this->minimalChannel(), [
