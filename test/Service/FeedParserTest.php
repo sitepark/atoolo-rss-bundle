@@ -540,6 +540,43 @@ class FeedParserTest extends TestCase
         $this->assertSame('<p>Volltext</p>', $item->content);
     }
 
+    public function testParseDropsUrlsOtherThanHttp(): void
+    {
+        $xml = '<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel>'
+            . '<link>JaVaScRiPt:alert(2)</link>'
+            . '<image><url>file:///etc/passwd</url></image>'
+            . '<item>'
+            . '<link>javascript:alert(1)</link>'
+            . '<guid>javascript:alert(3)</guid>'
+            . '<enclosure url="data:image/svg+xml,&lt;svg onload=alert(1)&gt;" type="image/svg+xml"/>'
+            . '<media:thumbnail url="//"/>'
+            . '</item>'
+            . '<item><link>javascript:alert(4)</link></item>'
+            . '</channel></rss>';
+
+        $feed = $this->parser->parse($xml, self::URL);
+
+        $this->assertSame(self::URL, $feed->channel->link, 'falls back to the feed url');
+        $this->assertNull($feed->channel->image);
+        $this->assertCount(1, $feed->items, 'an item without any usable link or guid is skipped');
+        $this->assertSame('', $feed->items[0]->link);
+        $this->assertSame('javascript:alert(3)', $feed->items[0]->guid, 'a guid is an identifier, not a url');
+        $this->assertNull($feed->items[0]->media);
+        $this->assertNull($feed->items[0]->thumbnail);
+    }
+
+    public function testParseWithoutItems(): void
+    {
+        $feed = (new FeedParser(0))->parse(
+            '<rss version="2.0"><channel>'
+                . '<item><link>https://www.example.com/a.php</link></item>'
+                . '</channel></rss>',
+            self::URL,
+        );
+
+        $this->assertSame([], $feed->items);
+    }
+
     public function testParseLimitsItems(): void
     {
         $items = str_repeat(

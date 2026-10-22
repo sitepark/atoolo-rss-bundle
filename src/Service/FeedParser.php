@@ -138,12 +138,12 @@ class FeedParser
 
         $items = [];
         foreach ($this->children($channel, 'item') as $element) {
+            if (count($items) >= $this->maxItems) {
+                break;
+            }
             $item = $this->parseRssItem($element);
             if ($item !== null) {
                 $items[] = $item;
-            }
-            if (count($items) >= $this->maxItems) {
-                break;
             }
         }
 
@@ -234,12 +234,12 @@ class FeedParser
 
         $items = [];
         foreach ($this->children($feed, 'entry', self::ATOM_NAMESPACE) as $entry) {
+            if (count($items) >= $this->maxItems) {
+                break;
+            }
             $item = $this->parseAtomEntry($entry);
             if ($item !== null) {
                 $items[] = $item;
-            }
-            if (count($items) >= $this->maxItems) {
-                break;
             }
         }
 
@@ -531,19 +531,24 @@ class FeedParser
     private function isHttpUrl(string $value): bool
     {
         $scheme = strtolower((string) parse_url($value, PHP_URL_SCHEME));
+        $host = parse_url($value, PHP_URL_HOST);
         return ($scheme === 'http' || $scheme === 'https')
-            && parse_url($value, PHP_URL_HOST) !== null;
+            && is_string($host)
+            && $host !== '';
     }
 
     /**
-     * Resolves a url found in the given element against its base.
+     * Resolves a url found in the given element against its base. Anything
+     * but an http(s) url, like `javascript:`, `data:` or `file:`, is dropped,
+     * as urls usually end up in `href` and `src` attributes unchecked.
      */
     private function url(\DOMElement $element, ?string $url): ?string
     {
         if ($url === null) {
             return null;
         }
-        return $this->urlResolver->resolve($element->baseURI ?? '', $url);
+        $url = $this->urlResolver->resolve($element->baseURI ?? '', $url);
+        return $this->isHttpUrl($url) ? $url : null;
     }
 
     private function urlText(?\DOMElement $element): ?string
