@@ -155,22 +155,40 @@ class FeedReader
         return $stale;
     }
 
+    private function tooLarge(string $url): FeedReadException
+    {
+        return new FeedReadException(
+            "unable to load feed '$url': feed exceeds the maximum size of "
+                . "$this->maxSize bytes",
+        );
+    }
+
     /**
      * @throws FeedReadException
      */
     private function load(string $url): Feed
     {
         try {
-            $content = $this->httpClient->request('GET', $url, [
+            $response = $this->httpClient->request('GET', $url, [
                 'headers' => ['Accept' => self::ACCEPT],
-                'on_progress' => function (int $loaded, int $size): void {
-                    if ($loaded > $this->maxSize || $size > $this->maxSize) {
-                        throw new FeedReadException(
-                            "feed exceeds the maximum size of $this->maxSize bytes",
-                        );
-                    }
-                },
-            ])->getContent();
+            ]);
+            // throws for 3xx to 5xx
+            $length = $response->getHeaders()['content-length'][0] ?? null;
+            // compressed, so the feed is at least that large
+            if ($length !== null && (int) $length > $this->maxSize) {
+                $response->cancel();
+                throw $this->tooLarge($url);
+            }
+            $content = '';
+            // The chunks are already decompressed, so this limits the size
+            // of the feed, not just the bytes transferred (gzip bombs).
+            foreach ($this->httpClient->stream($response) as $chunk) {
+                $content .= $chunk->getContent();
+                if (strlen($content) > $this->maxSize) {
+                    $response->cancel();
+                    throw $this->tooLarge($url);
+                }
+            }
         } catch (ExceptionInterface $e) {
             throw new FeedReadException(
                 "unable to load feed '$url': " . $e->getMessage(),

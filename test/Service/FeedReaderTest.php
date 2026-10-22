@@ -242,7 +242,7 @@ class FeedReaderTest extends TestCase
     public function testReadAbortsOnAnnouncedOversize(): void
     {
         $reader = $this->createReader([
-            new MockResponse($this->feed('News'), [
+            new MockResponse(str_repeat(' ', 10_000), [
                 'response_headers' => ['content-length' => '10000'],
             ]),
         ]);
