@@ -514,6 +514,32 @@ class FeedParserTest extends TestCase
         $this->assertCount(1, $atom->items);
     }
 
+    public function testParseLimitsAtomEntries(): void
+    {
+        $entries = str_repeat('<entry><id>urn:uuid:1</id></entry>', 5);
+
+        $feed = (new FeedParser(3))->parse(
+            '<feed xmlns="http://www.w3.org/2005/Atom">' . $entries . '</feed>',
+            self::URL,
+        );
+
+        $this->assertCount(3, $feed->items);
+    }
+
+    public function testParseAtomHtmlAsIs(): void
+    {
+        $xml = '<feed xmlns="http://www.w3.org/2005/Atom"><entry>'
+            . '<id>urn:uuid:1</id>'
+            . '<summary type="html">Text mit &lt;b&gt;Markup&lt;/b&gt;</summary>'
+            . '<content type="text/html">&lt;p&gt;Volltext&lt;/p&gt;</content>'
+            . '</entry></feed>';
+
+        $item = $this->parser->parse($xml, self::URL)->items[0];
+
+        $this->assertSame('Text mit <b>Markup</b>', $item->description);
+        $this->assertSame('<p>Volltext</p>', $item->content);
+    }
+
     public function testParseLimitsItems(): void
     {
         $items = str_repeat(
@@ -617,6 +643,8 @@ class FeedParserTest extends TestCase
             'weekday' => ['Monday', null],
             'time only' => ['12:00', null],
             'garbage' => ['gestern', null],
+            'invalid rfc 822' => ['Tue, 31 Feb 2026 12:00:00 +0100', null],
+            'invalid other' => ['2026-02-31', null],
         ];
     }
 

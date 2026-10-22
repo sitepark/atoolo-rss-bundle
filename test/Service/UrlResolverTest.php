@@ -76,6 +76,32 @@ class UrlResolverTest extends TestCase
         );
     }
 
+    /**
+     * @return array<string, array{string, string, string}>
+     */
+    public static function edgeCases(): array
+    {
+        return [
+            // RFC 3986, 5.2.4: a rootless path keeps the slash of a removed segment
+            'dot segments in a reference with scheme' => [self::BASE, 'g:./h/../i', 'g:/i'],
+            'leading parent segment in a reference with scheme' => [self::BASE, 'g:../h', 'g:h'],
+            'only a parent segment in a reference with scheme' => [self::BASE, 'g:..', 'g:'],
+            'base without slash in its path' => ['urn:example:a', 'b', 'urn:b'],
+        ];
+    }
+
+    #[DataProvider('edgeCases')]
+    public function testResolveEdgeCase(
+        string $base,
+        string $reference,
+        string $expected,
+    ): void {
+        $this->assertSame(
+            $expected,
+            (new UrlResolver())->resolve($base, $reference),
+        );
+    }
+
     public function testResolveAgainstBaseWithoutPath(): void
     {
         $this->assertSame(
