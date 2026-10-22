@@ -69,8 +69,9 @@ The result looks the same for both formats:
 - **Titles are plain text, descriptions and contents are HTML.** Atom text
   is escaped to HTML for that. The HTML comes from a foreign site: sanitise
   it before output, e.g. with `symfony/html-sanitizer`, or strip it.
-- **Urls are absolute**, resolved against `xml:base` and the feed's url.
-  Urls inside the HTML are left as they are.
+- **Urls are absolute http(s) urls**, resolved against `xml:base` and the
+  feed's url. Others, like `javascript:` or `data:`, are dropped. Urls
+  inside the HTML are left as they are.
 - **Gaps are filled in:** a missing `guid` from the link; a missing link
   from the `guid`, if that is an http url; a missing channel link from the
   feed's url. Items with neither link nor guid are skipped.
@@ -85,6 +86,10 @@ fails, the last loaded feed is returned for up to `stale_ttl` after it was
 loaded, and a warning is logged. After a failure the url is not requested
 again for `retry_delay`, so an unavailable source does not slow down every
 page that shows it. Without a stale feed the failure is thrown.
+
+There is no stampede protection: when a feed is due for reloading,
+concurrent reads may load it at the same time. With a feed per page and a
+`cache_ttl` of minutes this costs a few extra requests to the source.
 
 ```yaml
 parameters:
@@ -112,7 +117,8 @@ Feed urls usually come from editors. Only http(s) urls are accepted,
 requests into the private network are refused (`NoPrivateNetworkHttpClient`;
 the bundle requires the `symfony/http-client` and `symfony/http-foundation`
 versions that fix CVE-2024-50342 and CVE-2026-48736), and feeds larger than
-`max_size` are aborted while loading. External XML entities are never loaded.
+`max_size` after decompression are aborted while loading. External XML
+entities are never loaded.
 
 ## Extension points
 
