@@ -6,6 +6,16 @@ parameters:
   atoolo_rss.channel.description: ~
   # Upper bound for the `limit` of an incoming query; more is rejected.
   atoolo_rss.max_items: 100
+  # Options of the HTTP client the FeedReader loads feeds with
+  # (https://symfony.com/doc/current/http_client.html#configuration)
+  atoolo_rss.reader.http_client.options:
+    timeout: 5
+    max_duration: 10
+    max_redirects: 3
+    headers:
+      User-Agent: 'atoolo-rss-bundle'
+  # Seconds a loaded feed is cached, 0 disables caching.
+  atoolo_rss.reader.cache_ttl: 900
 
 services:
   _defaults:
@@ -63,3 +73,34 @@ services:
       - '%atoolo_rss.max_items%'
     tags:
       - { name: 'controller.service_arguments' }
+
+  atoolo_rss.reader.http_client.inner:
+    class: Symfony\Contracts\HttpClient\HttpClientInterface
+    factory: ['Symfony\Component\HttpClient\HttpClient', 'create']
+    arguments:
+      - '%atoolo_rss.reader.http_client.options%'
+
+  # Feed urls usually come from editors, so requests into the private
+  # network are refused.
+  atoolo_rss.reader.http_client:
+    class: Symfony\Component\HttpClient\NoPrivateNetworkHttpClient
+    # a logger belongs on the wrapped client (deprecated since http-client 7.1)
+    autoconfigure: false
+    arguments:
+      - '@atoolo_rss.reader.http_client.inner'
+
+  # A cache pool like any other; a project can change its adapter, e.g. to
+  # share it between servers via Redis.
+  atoolo_rss.reader.cache:
+    parent: cache.app
+    tags:
+      - { name: 'cache.pool', namespace: 'atoolo_rss_reader' }
+
+  Atoolo\Rss\Service\FeedParser: ~
+
+  Atoolo\Rss\Service\FeedReader:
+    arguments:
+      - '@atoolo_rss.reader.http_client'
+      - '@Atoolo\Rss\Service\FeedParser'
+      - '@atoolo_rss.reader.cache'
+      - '%atoolo_rss.reader.cache_ttl%'
