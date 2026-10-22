@@ -27,6 +27,8 @@ class FeedReader
         private readonly CacheInterface $cache,
         /** seconds a feed is cached, 0 disables caching */
         private readonly int $cacheTtl,
+        /** bytes a feed may have; larger ones are aborted while loading */
+        private readonly int $maxSize,
     ) {}
 
     /**
@@ -62,6 +64,13 @@ class FeedReader
         try {
             $content = $this->httpClient->request('GET', $url, [
                 'headers' => ['Accept' => self::ACCEPT],
+                'on_progress' => function (int $loaded, int $size): void {
+                    if ($loaded > $this->maxSize || $size > $this->maxSize) {
+                        throw new FeedReadException(
+                            "feed exceeds the maximum size of $this->maxSize bytes",
+                        );
+                    }
+                },
             ])->getContent();
         } catch (ExceptionInterface $e) {
             throw new FeedReadException(

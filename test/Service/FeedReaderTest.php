@@ -129,6 +129,41 @@ class FeedReaderTest extends TestCase
         $reader->read(self::URL);
     }
 
+    public function testReadAbortsOversizedFeed(): void
+    {
+        $chunks = (static function (): \Generator {
+            for ($i = 0; $i < 10; $i++) {
+                yield str_repeat(' ', 1_000);
+            }
+        })();
+        $reader = $this->createReader(
+            new MockHttpClient([new MockResponse($chunks)]),
+        );
+
+        $this->expectException(FeedReadException::class);
+        $this->expectExceptionMessage(
+            'feed exceeds the maximum size of 5000 bytes',
+        );
+
+        $reader->read(self::URL);
+    }
+
+    public function testReadAbortsOnAnnouncedOversize(): void
+    {
+        $reader = $this->createReader(new MockHttpClient([
+            new MockResponse(self::FEED, [
+                'response_headers' => ['content-length' => '10000'],
+            ]),
+        ]));
+
+        $this->expectException(FeedReadException::class);
+        $this->expectExceptionMessage(
+            'feed exceeds the maximum size of 5000 bytes',
+        );
+
+        $reader->read(self::URL);
+    }
+
     public function testReadRejectsNonHttpUrl(): void
     {
         $client = new MockHttpClient();
@@ -149,12 +184,14 @@ class FeedReaderTest extends TestCase
     private function createReader(
         MockHttpClient $client,
         int $cacheTtl = 900,
+        int $maxSize = 5_000,
     ): FeedReader {
         return new FeedReader(
             $client,
             new FeedParser(),
             new ArrayAdapter(),
             $cacheTtl,
+            $maxSize,
         );
     }
 }

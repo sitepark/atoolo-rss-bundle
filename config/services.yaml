@@ -16,6 +16,8 @@ parameters:
       User-Agent: 'atoolo-rss-bundle'
   # Seconds a loaded feed is cached, 0 disables caching.
   atoolo_rss.reader.cache_ttl: 900
+  # Bytes a feed may have; loading a larger one is aborted.
+  atoolo_rss.reader.max_size: 5242880
 
 services:
   _defaults:
@@ -104,3 +106,4 @@ services:
       - '@Atoolo\Rss\Service\FeedParser'
       - '@atoolo_rss.reader.cache'
       - '%atoolo_rss.reader.cache_ttl%'
+      - '%atoolo_rss.reader.max_size%'
