@@ -18,6 +18,8 @@ parameters:
   atoolo_rss.reader.cache_ttl: 900
   # Bytes a feed may have; loading a larger one is aborted.
   atoolo_rss.reader.max_size: 5242880
+  # Items read from a feed at most, the rest is ignored.
+  atoolo_rss.reader.max_items: 500
 
 services:
   _defaults:
@@ -98,7 +100,9 @@ services:
     tags:
       - { name: 'cache.pool', namespace: 'atoolo_rss_reader' }
 
-  Atoolo\Rss\Service\FeedParser: ~
+  Atoolo\Rss\Service\FeedParser:
+    arguments:
+      - '%atoolo_rss.reader.max_items%'
 
   Atoolo\Rss\Service\FeedReader:
     arguments:

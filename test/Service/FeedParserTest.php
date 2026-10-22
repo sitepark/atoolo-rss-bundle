@@ -115,12 +115,13 @@ class FeedParserTest extends TestCase
     public function testParseMinimalRssFallsBackToUrl(): void
     {
         $xml = '<rss version="2.0"><channel><item>'
+            . '<guid isPermaLink="false">a-1</guid>'
             . '<description>Nur Text</description>'
             . '</item></channel></rss>';
 
         $expected = new Feed(
             new Channel(title: '', link: self::URL, selfLink: self::URL),
-            [new Item(title: '', link: '', guid: '', description: 'Nur Text')],
+            [new Item(title: '', link: '', guid: 'a-1', description: 'Nur Text')],
         );
 
         $this->assertEquals($expected, $this->parser->parse($xml, self::URL));
@@ -178,7 +179,7 @@ class FeedParserTest extends TestCase
     {
         $feed = $this->parseRssItems(
             '<item xmlns:dc="http://purl.org/dc/elements/1.1/">'
-                . '<dc:date>2026-03-01T12:00:00+01:00</dc:date></item>',
+                . '<link>https://www.example.com/a.php</link><dc:date>2026-03-01T12:00:00+01:00</dc:date></item>',
         );
 
         $this->assertEquals(
@@ -190,7 +191,7 @@ class FeedParserTest extends TestCase
     public function testParseInvalidDateIsIgnored(): void
     {
         $feed = $this->parseRssItems(
-            '<item><pubDate>gestern</pubDate></item>',
+            '<item><link>https://www.example.com/a.php</link><pubDate>gestern</pubDate></item>',
         );
 
         $this->assertNull($feed->items[0]->pubDate);
@@ -199,7 +200,7 @@ class FeedParserTest extends TestCase
     public function testParseEnclosure(): void
     {
         $feed = $this->parseRssItems(
-            '<item><enclosure url="https://www.example.com/i.png" '
+            '<item><link>https://www.example.com/a.php</link><enclosure url="https://www.example.com/i.png" '
                 . 'type="image/png" length="0"/></item>',
         );
 
@@ -213,7 +214,7 @@ class FeedParserTest extends TestCase
     public function testParseMediaPrefersImage(): void
     {
         $feed = $this->parseRssItems(
-            '<item xmlns:media="http://search.yahoo.com/mrss/">'
+            '<item xmlns:media="http://search.yahoo.com/mrss/"><link>https://www.example.com/a.php</link>'
                 . '<enclosure url="https://www.example.com/a.mp3" type="audio/mpeg" length="100"/>'
                 . '<media:content url="https://www.example.com/v.mp4" medium="video"/>'
                 . '<media:content url="https://www.example.com/i.jpg" type="image/jpeg"/>'
@@ -229,7 +230,7 @@ class FeedParserTest extends TestCase
     public function testParseMediaWithoutImage(): void
     {
         $feed = $this->parseRssItems(
-            '<item><enclosure url="https://www.example.com/a.mp3" '
+            '<item><link>https://www.example.com/a.php</link><enclosure url="https://www.example.com/a.mp3" '
                 . 'type="audio/mpeg" length="100"/></item>',
         );
 
@@ -242,7 +243,7 @@ class FeedParserTest extends TestCase
     public function testParseMediaGroup(): void
     {
         $feed = $this->parseRssItems(
-            '<item xmlns:media="http://search.yahoo.com/mrss/"><media:group>'
+            '<item xmlns:media="http://search.yahoo.com/mrss/"><link>https://www.example.com/a.php</link><media:group>'
                 . '<media:content url="https://www.example.com/v.mp4" medium="video"/>'
                 . '<media:thumbnail url="https://www.example.com/t.jpg"/>'
                 . '</media:group></item>',
@@ -261,7 +262,7 @@ class FeedParserTest extends TestCase
     public function testParseMediaWithoutUrlIsIgnored(): void
     {
         $feed = $this->parseRssItems(
-            '<item xmlns:media="http://search.yahoo.com/mrss/">'
+            '<item xmlns:media="http://search.yahoo.com/mrss/"><link>https://www.example.com/a.php</link>'
                 . '<media:content medium="image"/><media:thumbnail/></item>',
         );
 
@@ -285,7 +286,7 @@ class FeedParserTest extends TestCase
          <logo>https://www.example.com/logo.png</logo>
          <entry>
           <id>urn:uuid:1</id>
-          <title type="html">Rat &lt;b&gt;beschließt&lt;/b&gt;</title>
+          <title type="html">Rat &lt;b&gt;beschließt&lt;/b&gt; &amp;amp; mehr</title>
           <link rel="alternate" type="text/html" href="https://www.example.com/a.php"/>
           <link rel="enclosure" type="image/png" length="42" href="https://www.example.com/i.png"/>
           <summary>Zusammenfassung</summary>
@@ -316,7 +317,7 @@ class FeedParserTest extends TestCase
             ),
             [
                 new Item(
-                    title: 'Rat <b>beschließt</b>',
+                    title: 'Rat beschließt & mehr',
                     link: 'https://www.example.com/a.php',
                     guid: 'urn:uuid:1',
                     description: 'Zusammenfassung',
@@ -346,6 +347,7 @@ class FeedParserTest extends TestCase
     public function testParseMinimalAtomFallsBackToUrl(): void
     {
         $xml = '<feed xmlns="http://www.w3.org/2005/Atom"><entry>'
+            . '<id>urn:uuid:2</id>'
             . '<updated>2026-03-02T12:00:00Z</updated>'
             . '<content src="https://www.example.com/a.html"/>'
             . '</entry></feed>';
@@ -356,7 +358,7 @@ class FeedParserTest extends TestCase
                 new Item(
                     title: '',
                     link: '',
-                    guid: '',
+                    guid: 'urn:uuid:2',
                     pubDate: new \DateTimeImmutable('2026-03-02T12:00:00Z'),
                 ),
             ],
@@ -384,6 +386,7 @@ class FeedParserTest extends TestCase
     public function testParseEmptyAtomXhtml(): void
     {
         $xml = '<feed xmlns="http://www.w3.org/2005/Atom"><entry>'
+            . '<id>urn:uuid:3</id>'
             . '<summary type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml"> </div></summary>'
             . '<content type="xhtml"/>'
             . '</entry></feed>';
@@ -433,6 +436,201 @@ class FeedParserTest extends TestCase
             $feed,
             $this->parser->parse((new FeedWriter())->write($feed), self::URL),
             'parsing a written feed should restore it',
+        );
+    }
+
+    public function testParseAtomTextAsEscapedHtml(): void
+    {
+        $xml = '<feed xmlns="http://www.w3.org/2005/Atom"><entry>'
+            . '<id>urn:uuid:1</id>'
+            . '<summary type="text">a &lt;script&gt;alert(1)&lt;/script&gt;</summary>'
+            . '<content>Tom &amp; "Jerry"</content>'
+            . '</entry></feed>';
+
+        $item = $this->parser->parse($xml, self::URL)->items[0];
+
+        $this->assertSame(
+            'a &lt;script&gt;alert(1)&lt;/script&gt;',
+            $item->description,
+            'text should be escaped, as description is always HTML',
+        );
+        $this->assertSame(
+            'Tom &amp; &quot;Jerry&quot;',
+            $item->content,
+            'content without type is text',
+        );
+    }
+
+    public function testParseAtomContentOfOtherMediaTypeIsIgnored(): void
+    {
+        $xml = '<feed xmlns="http://www.w3.org/2005/Atom"><entry>'
+            . '<id>urn:uuid:1</id>'
+            . '<content type="image/png">iVBORw0KGgo=</content>'
+            . '</entry></feed>';
+
+        $this->assertNull($this->parser->parse($xml, self::URL)->items[0]->content);
+    }
+
+    public function testParseAtomXhtmlTitleAsText(): void
+    {
+        $xml = '<feed xmlns="http://www.w3.org/2005/Atom"><entry>'
+            . '<id>urn:uuid:1</id>'
+            . '<title type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml">'
+            . 'Rat <b>beschließt</b></div></title>'
+            . '</entry></feed>';
+
+        $this->assertSame(
+            'Rat beschließt',
+            $this->parser->parse($xml, self::URL)->items[0]->title,
+        );
+    }
+
+    public function testParseRssGuidWithoutUrlIsNoLink(): void
+    {
+        $feed = $this->parseRssItems('<item><guid>12345@example</guid></item>');
+
+        $this->assertSame(
+            '',
+            $feed->items[0]->link,
+            'a guid should only become the link if it is an http url',
+        );
+        $this->assertSame('12345@example', $feed->items[0]->guid);
+    }
+
+    public function testParseSkipsItemsWithoutLinkAndGuid(): void
+    {
+        $rss = $this->parseRssItems(
+            '<item><title>ohne Link</title></item>'
+                . '<item><link>https://www.example.com/a.php</link></item>',
+        );
+        $atom = $this->parser->parse(
+            '<feed xmlns="http://www.w3.org/2005/Atom">'
+                . '<entry><title>ohne Link</title></entry>'
+                . '<entry><id>urn:uuid:1</id></entry></feed>',
+            self::URL,
+        );
+
+        $this->assertCount(1, $rss->items);
+        $this->assertCount(1, $atom->items);
+    }
+
+    public function testParseLimitsItems(): void
+    {
+        $items = str_repeat(
+            '<item><link>https://www.example.com/a.php</link></item>',
+            5,
+        );
+
+        $feed = (new FeedParser(3))->parse(
+            '<rss version="2.0"><channel>' . $items . '</channel></rss>',
+            self::URL,
+        );
+
+        $this->assertCount(3, $feed->items);
+    }
+
+    public function testParseResolvesRelativeRssUrls(): void
+    {
+        $xml = '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"'
+            . ' xmlns:media="http://search.yahoo.com/mrss/"><channel>'
+            . '<link>/</link>'
+            . '<atom:link rel="self" href="news.xml"/>'
+            . '<image><url>../logo.png</url><link>/presse/</link></image>'
+            . '<item>'
+            . '<link>a.php</link>'
+            . '<enclosure url="/img/a.jpg" type="image/jpeg"/>'
+            . '<media:thumbnail url="t.jpg"/>'
+            . '</item></channel></rss>';
+
+        $feed = $this->parser->parse($xml, 'https://feeds.example.com/rss/news.xml');
+
+        $this->assertSame('https://feeds.example.com/', $feed->channel->link);
+        $this->assertSame(
+            'https://feeds.example.com/rss/news.xml',
+            $feed->channel->selfLink,
+        );
+        $this->assertSame(
+            'https://feeds.example.com/logo.png',
+            $feed->channel->image?->url,
+        );
+        $this->assertSame(
+            'https://feeds.example.com/presse/',
+            $feed->channel->image?->link,
+        );
+        $this->assertSame(
+            'https://feeds.example.com/rss/a.php',
+            $feed->items[0]->link,
+        );
+        $this->assertSame(
+            'https://feeds.example.com/img/a.jpg',
+            $feed->items[0]->media?->url,
+        );
+        $this->assertSame(
+            'https://feeds.example.com/rss/t.jpg',
+            $feed->items[0]->thumbnail?->url,
+        );
+    }
+
+    public function testParseResolvesAtomUrlsAgainstXmlBase(): void
+    {
+        $xml = '<feed xmlns="http://www.w3.org/2005/Atom" xml:base="https://ex.org/blog/">'
+            . '<link href="./"/>'
+            . '<logo>logo.png</logo>'
+            . '<entry xml:base="2026/">'
+            . '<id>urn:uuid:1</id>'
+            . '<link href="post-1"/>'
+            . '<link rel="enclosure" href="/img/a.jpg" type="image/jpeg"/>'
+            . '</entry></feed>';
+
+        $feed = $this->parser->parse($xml, self::URL);
+
+        $this->assertSame('https://ex.org/blog/', $feed->channel->link);
+        $this->assertSame(
+            'https://ex.org/blog/logo.png',
+            $feed->channel->image?->url,
+        );
+        $this->assertSame(
+            'https://ex.org/blog/2026/post-1',
+            $feed->items[0]->link,
+            'nested xml:base should be applied',
+        );
+        $this->assertSame(
+            'https://ex.org/img/a.jpg',
+            $feed->items[0]->media?->url,
+        );
+    }
+
+    /**
+     * @return array<string, array{string, ?string}>
+     */
+    public static function dates(): array
+    {
+        return [
+            'rfc 822' => ['Sun, 01 Mar 2026 12:00:00 +0100', '2026-03-01T12:00:00+01:00'],
+            'zone name' => ['Sun, 01 Mar 2026 11:00:00 GMT', '2026-03-01T11:00:00+00:00'],
+            'wrong weekday' => ['Mon, 01 Mar 2026 12:00:00 +0100', '2026-03-01T12:00:00+01:00'],
+            'without weekday and seconds' => ['1 Mar 2026 12:00 +0100', '2026-03-01T12:00:00+01:00'],
+            'rfc 3339' => ['2026-03-01T12:00:00+01:00', '2026-03-01T12:00:00+01:00'],
+            'rfc 3339 with fraction' => ['2026-03-01T11:00:00.123Z', '2026-03-01T11:00:00+00:00'],
+            'other absolute date' => ['2026-03-01 12:00:00 +0100', '2026-03-01T12:00:00+01:00'],
+            'relative' => ['tomorrow', null],
+            'weekday' => ['Monday', null],
+            'time only' => ['12:00', null],
+            'garbage' => ['gestern', null],
+        ];
+    }
+
+    #[DataProvider('dates')]
+    public function testParseDate(string $value, ?string $expected): void
+    {
+        $feed = $this->parseRssItems(
+            '<item><guid isPermaLink="false">a-1</guid>'
+                . '<pubDate>' . $value . '</pubDate></item>',
+        );
+
+        $this->assertSame(
+            $expected,
+            $feed->items[0]->pubDate?->format(\DateTimeInterface::RFC3339),
         );
     }
 

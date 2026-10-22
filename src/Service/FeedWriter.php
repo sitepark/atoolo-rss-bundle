@@ -9,7 +9,7 @@ use Atoolo\Rss\Dto\Item;
 use Atoolo\Rss\Dto\Media;
 
 /**
- * Serialises a feed to RSS 2.0. The only class that knows about XML.
+ * Serialises a feed to RSS 2.0, the counterpart of `FeedParser`.
  */
 class FeedWriter
 {
@@ -30,6 +30,7 @@ class FeedWriter
         $writer->writeAttribute('version', '2.0');
         $writer->writeAttribute('xmlns:atom', self::ATOM_NAMESPACE);
         $writer->writeAttribute('xmlns:media', self::MEDIA_NAMESPACE);
+        $writer->writeAttribute('xmlns:content', self::CONTENT_NAMESPACE);
 
         $this->writeChannel($writer, $feed);
 
@@ -102,12 +103,7 @@ class FeedWriter
         }
 
         if ($item->content !== null && $item->content !== '') {
-            $writer->writeElementNs(
-                'content',
-                'encoded',
-                self::CONTENT_NAMESPACE,
-                $item->content,
-            );
+            $writer->writeElement('content:encoded', $item->content);
         }
 
         if ($item->media !== null) {
