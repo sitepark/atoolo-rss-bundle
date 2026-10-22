@@ -497,14 +497,20 @@ class FeedParser
         $value = (string) preg_replace('/^[a-z]+,\s*/i', '', $value);
         foreach (self::DATE_FORMATS as $format) {
             $date = \DateTimeImmutable::createFromFormat($format, $value);
-            if ($date !== false) {
-                return $date;
+            if ($date === false) {
+                continue;
             }
+            // an invalid date like 31 Feb would roll over into March
+            $errors = \DateTimeImmutable::getLastErrors();
+            return $errors === false || $errors['warning_count'] === 0
+                ? $date
+                : null;
         }
 
         $parsed = date_parse($value);
         if (
             $parsed['error_count'] > 0
+            || $parsed['warning_count'] > 0
             || isset($parsed['relative'])
             || $parsed['year'] === false
             || $parsed['month'] === false
@@ -514,9 +520,12 @@ class FeedParser
         }
         try {
             return new \DateTimeImmutable($value);
+            // @codeCoverageIgnoreStart
         } catch (\Exception) {
+            // not expected, date_parse() uses the same parser
             return null;
         }
+        // @codeCoverageIgnoreEnd
     }
 
     private function isHttpUrl(string $value): bool
