@@ -14,8 +14,12 @@ parameters:
     max_redirects: 3
     headers:
       User-Agent: 'atoolo-rss-bundle'
-  # Seconds a loaded feed is cached, 0 disables caching.
+  # Seconds a loaded feed is fresh, 0 disables caching.
   atoolo_rss.reader.cache_ttl: 900
+  # Seconds after loading a feed is still returned if reloading it fails.
+  atoolo_rss.reader.stale_ttl: 86400
+  # Seconds a feed url is not requested again after a failure.
+  atoolo_rss.reader.retry_delay: 60
   # Bytes a feed may have; loading a larger one is aborted.
   atoolo_rss.reader.max_size: 5242880
   # Items read from a feed at most, the rest is ignored.
@@ -111,3 +115,7 @@ services:
       - '@atoolo_rss.reader.cache'
       - '%atoolo_rss.reader.cache_ttl%'
       - '%atoolo_rss.reader.max_size%'
+      - '%atoolo_rss.reader.stale_ttl%'
+      - '%atoolo_rss.reader.retry_delay%'
+      - '@?clock'
+      - '@?logger'
