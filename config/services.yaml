@@ -6,6 +6,24 @@ parameters:
   atoolo_rss.channel.description: ~
   # Upper bound for the `limit` of an incoming query; more is rejected.
   atoolo_rss.max_items: 100
+  # Options of the HTTP client the FeedReader loads feeds with
+  # (https://symfony.com/doc/current/http_client.html#configuration)
+  atoolo_rss.reader.http_client.options:
+    timeout: 5
+    max_duration: 10
+    max_redirects: 3
+    headers:
+      User-Agent: 'atoolo-rss-bundle'
+  # Seconds a loaded feed is fresh, 0 disables caching.
+  atoolo_rss.reader.cache_ttl: 900
+  # Seconds after loading a feed is still returned if reloading it fails.
+  atoolo_rss.reader.stale_ttl: 86400
+  # Seconds a feed url is not requested again after a failure.
+  atoolo_rss.reader.retry_delay: 60
+  # Bytes a feed may have; loading a larger one is aborted.
+  atoolo_rss.reader.max_size: 5242880
+  # Items read from a feed at most, the rest is ignored.
+  atoolo_rss.reader.max_items: 500
 
 services:
   _defaults:
@@ -63,3 +81,41 @@ services:
       - '%atoolo_rss.max_items%'
     tags:
       - { name: 'controller.service_arguments' }
+
+  atoolo_rss.reader.http_client.inner:
+    class: Symfony\Contracts\HttpClient\HttpClientInterface
+    factory: ['Symfony\Component\HttpClient\HttpClient', 'create']
+    arguments:
+      - '%atoolo_rss.reader.http_client.options%'
+
+  # Feed urls usually come from editors, so requests into the private
+  # network are refused.
+  atoolo_rss.reader.http_client:
+    class: Symfony\Component\HttpClient\NoPrivateNetworkHttpClient
+    # a logger belongs on the wrapped client (deprecated since http-client 7.1)
+    autoconfigure: false
+    arguments:
+      - '@atoolo_rss.reader.http_client.inner'
+
+  # A cache pool like any other; a project can change its adapter, e.g. to
+  # share it between servers via Redis.
+  atoolo_rss.reader.cache:
+    parent: cache.app
+    tags:
+      - { name: 'cache.pool', namespace: 'atoolo_rss_reader' }
+
+  Atoolo\Rss\Service\FeedParser:
+    arguments:
+      - '%atoolo_rss.reader.max_items%'
+
+  Atoolo\Rss\Service\FeedReader:
+    arguments:
+      - '@atoolo_rss.reader.http_client'
+      - '@Atoolo\Rss\Service\FeedParser'
+      - '@atoolo_rss.reader.cache'
+      - '%atoolo_rss.reader.cache_ttl%'
+      - '%atoolo_rss.reader.max_size%'
+      - '%atoolo_rss.reader.stale_ttl%'
+      - '%atoolo_rss.reader.retry_delay%'
+      - '@?clock'
+      - '@?logger'

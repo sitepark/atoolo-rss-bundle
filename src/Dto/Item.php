@@ -17,5 +17,9 @@ class Item
         public readonly ?\DateTimeImmutable $pubDate = null,
         public readonly ?Media $media = null,
         public readonly array $categories = [],
+        /** the full content, e.g. `content:encoded` or Atom's `content` */
+        public readonly ?string $content = null,
+        /** a `media:thumbnail` of the item or of its media */
+        public readonly ?Media $thumbnail = null,
     ) {}
 }

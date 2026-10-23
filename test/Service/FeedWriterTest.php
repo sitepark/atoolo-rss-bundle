@@ -69,7 +69,7 @@ class FeedWriterTest extends TestCase
 
         $expected = <<<XML
         <?xml version="1.0" encoding="UTF-8"?>
-        <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
+        <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/" xmlns:content="http://purl.org/rss/1.0/modules/content/">
          <channel>
           <title>Presse &amp; &lt;Aktuelles&gt;</title>
           <link>https://www.example.com/presse.php</link>
@@ -176,6 +176,39 @@ class FeedWriterTest extends TestCase
             '<media:content url="https://www.example.com/i.jpg"/>',
             $this->writer->write($feed),
             'type and fileSize are optional in MRSS',
+        );
+    }
+
+    public function testWriteContentMediumAndThumbnail(): void
+    {
+        $feed = new Feed($this->minimalChannel(), [
+            new Item(
+                title: 'A',
+                link: 'https://www.example.com/a',
+                guid: 'https://www.example.com/a',
+                media: new Media(
+                    'https://www.example.com/v.mp4',
+                    medium: 'video',
+                ),
+                content: '<p>Volltext</p>',
+                thumbnail: new Media('https://www.example.com/t.jpg'),
+            ),
+        ]);
+
+        $xml = $this->writer->write($feed);
+
+        $this->assertStringContainsString(
+            '<content:encoded>&lt;p&gt;Volltext&lt;/p&gt;</content:encoded>',
+            $xml,
+            'content should be written as content:encoded',
+        );
+        $this->assertStringContainsString(
+            '<media:content url="https://www.example.com/v.mp4" medium="video"/>',
+            $xml,
+        );
+        $this->assertStringContainsString(
+            '<media:thumbnail url="https://www.example.com/t.jpg"/>',
+            $xml,
         );
     }
 
